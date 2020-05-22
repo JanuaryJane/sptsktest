@@ -1,0 +1,70 @@
+{
+    "version": "1.1.32.618.gda5638a6",
+    "description": "Digital music service.",
+    "homepage": "https://www.spotify.com/",
+    "license": {
+        "identifier": "Freeware",
+        "url": "https://www.spotify.com/au/legal/end-user-agreement/"
+    },
+    "url": "https://download.scdn.co/SpotifyFullSetup.exe",
+    "hash": "5abf27318a30c4d18ea2d68a558d063678c375e7978dce73990631099fbaaf05",
+    "notes": "--purge should be used to fully uninstall this package.",
+    "installer": {
+        "script": [
+            "if ($global) {",
+            "    Write-Host \"$app cannot be installed globally.\" -Foreground Red",
+            "    exit 1",
+            "}",
+            "",
+            "if (Test-Path (appdir spotify-blockthespot)) {",
+            "    Write-Host \"$app and spotify-blockthespot cannot both be installed at the same time.\" -Foreground Red",
+            "    exit 1",
+            "}",
+            "",
+            "Stop-Process -ErrorAction Ignore -Name Spotify",
+            "Start-Process -Wait \"$dir\\SpotifyFullSetup.exe\" -ArgumentList '/extract', \"$dir\"",
+            "Remove-Item \"$dir\\SpotifyFullSetup.exe\"",
+            "",
+            "icacls \"$env:LOCALAPPDATA\\Spotify\\Update\" /reset /T | Out-Null",
+            "Remove-Item -ErrorAction Ignore -Recurse \"$env:LOCALAPPDATA\\Spotify\\Update\" | Out-Null",
+            "New-Item -ErrorAction Ignore \"$env:LOCALAPPDATA\\Spotify\\Update\" -ItemType Directory | Out-Null",
+            "icacls \"$env:LOCALAPPDATA\\Spotify\\Update\" /deny Everyone:R | Out-Null",
+            "",
+            "New-Item \"$dir\\config.ini\" # Persist for BlockTheSpot"
+        ]
+    },
+    "post_install": [
+        "if (Test-Path (appdir spicetify-cli)) { init-spicetify-config-and-apply }",
+        "elseif (Test-Path (appdir blockthespot)) { blockthespot }"
+    ],
+    "uninstaller": {
+        "script": [
+            "Stop-Process -ErrorAction Ignore -Name Spotify",
+            "if (-not $purge) { Move-Item -ErrorAction Ignore -Force \"$env:APPDATA\\Spotify\" -Destination \"$env:APPDATA\\Spotify.original\" }",
+            "Start-Process -Wait \"$dir\\Spotify.exe\" -ArgumentList '/Uninstall', '/Silent'",
+            "if (-not $purge) { Move-Item -ErrorAction Ignore -Force \"$env:APPDATA\\Spotify.original\" -Destination \"$env:APPDATA\\Spotify\" }",
+            "icacls \"$env:LOCALAPPDATA\\Spotify\\Update\" /grant Everyone:R | Out-Null",
+            "Remove-Item -ErrorAction Ignore -Recurse -Force \"$env:LOCALAPPDATA\\Spotify\\Update\""
+        ]
+    },
+    "bin": "Spotify.exe",
+    "shortcuts": [
+        [
+            "Spotify.exe",
+            "Spotify"
+        ]
+    ],
+    "persist": "config.ini",
+    "checkver_": {
+        "script": [
+            "Invoke-WebRequest https://download.scdn.co/SpotifyFullSetup.exe -OutFile 'SpotifyFullSetup.exe'",
+            "$version = Get-ChildItem SpotifyFullSetup.exe | ForEach-Object { $_.VersionInfo.ProductVersion }",
+            "Remove-Item 'SpotifyFullSetup.exe'",
+            "return $version"
+        ],
+        "regex": "(.+)"
+    },
+    "autoupdate": {
+        "url": "https://download.scdn.co/SpotifyFullSetup.exe"
+    }
+}
